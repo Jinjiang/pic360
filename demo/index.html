@@ -1,16 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html style="height: 100%;">
 <head>
   <title>Pic360 Demo</title>
-  <script src="http://unpkg.com/three"></script>
+  <!-- <script src="http://unpkg.com/three"></script> -->
+  <script src="../node_modules/three/build/three.js"></script>
   <script src="../src/detector.js"></script>
   <script src="../src/pic360.js"></script>
 </head>
-<body>
-  <div id="target" style="width: 960px; height: 480px; background-color: silver;"></div>
+<body style="
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  background: #222;
+">
+  <div id="target" style="
+    width: 960px;
+    height: 480px;
+    background-color: silver;
+  "></div>
   <script>
-    const pic = new Pic360('./pic.jpg', document.querySelector('#target'))
-    pic.initControl()
+    const pic = new Pic360(
+      './sample.jpg',
+      document.querySelector('#target'),
+      true)
   </script>
 </body>
 </html>
