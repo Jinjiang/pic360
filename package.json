@@ -1,15 +1,14 @@
 {
   "name": "pic360",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.0.1",
+  "description": "Show panorama pictures in 360 degrees",
+  "main": "src/pic360.js",
   "scripts": {
-    "run": "serve",
+    "serve": "serve",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["panorama"],
+  "author": "Jinjiang <zhaojinjiang@me.com>",
   "dependencies": {
     "serve": "^5.2.4",
     "three": "^0.86.0"
