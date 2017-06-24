@@ -1,10 +1,13 @@
 
-function Pic360 (src, el, needCtrl = false) {
+function Pic360 (src, el, { needCtrl, isVideo, lon, lat }) {
   if (!src || !el || !el.nodeType === 1) {
     return null
   }
   this.src = src
   this.el = el
+  this.isVideo = isVideo
+  this.lon = lon || 0
+  this.lat = lat || 0
   this.initCanvas()
   if (needCtrl) {
     this.initControl()
@@ -12,7 +15,7 @@ function Pic360 (src, el, needCtrl = false) {
 }
 
 Pic360.prototype.initCanvas = function () {
-  const { el, src } = this
+  const { el } = this
   const { offsetWidth, offsetHeight } = el
 
   const scene = new THREE.Scene()
@@ -23,7 +26,8 @@ Pic360.prototype.initCanvas = function () {
 
   el.appendChild(renderer.domElement)
 
-  const texture = new THREE.TextureLoader().load(src)
+  const texture = this.isVideo ? this.initVideoTexture() : this.initImageTexture()
+  this.texture = texture
   const mesh = new THREE.Mesh(
     new THREE.SphereGeometry(this.SIZE, 80, 50),
     new THREE.MeshBasicMaterial({ map: texture })
@@ -36,10 +40,22 @@ Pic360.prototype.initCanvas = function () {
   this.scene = scene
   this.camera = camera
 
-  this.lat = 0
-  this.lon = 0
-
   this.draw()
+}
+
+Pic360.prototype.initImageTexture = function () {
+  const { src } = this
+  return new THREE.TextureLoader().load(src)
+}
+
+Pic360.prototype.initVideoTexture = function () {
+  const { src } = this
+  const video = document.createElement('video')
+  video.autoplay = true
+  video.loop = true
+  video.src = src
+  this.video = video
+  return new THREE.VideoTexture(video)
 }
 
 Pic360.prototype.draw = function () {
@@ -58,7 +74,7 @@ Pic360.prototype.draw = function () {
 }
 
 Pic360.prototype.initControl = function () {
-  const { el } = this
+  const { el, isVideo } = this
 
   // up/down/left/right
   const keydown = this.keyDownListener.bind(this)
@@ -78,6 +94,24 @@ Pic360.prototype.initControl = function () {
 
   // touch move, zoom ...
   this.listeners = { keydown, mousedown, mousewheel, touchstart }
+
+  if (isVideo) {
+    const play = this.playListener.bind(this)
+    el.addEventListener('click', play)
+  }
+}
+
+Pic360.prototype.playListener = function () {
+  const { video, isVideo, mouseMoving } = this
+  if (isVideo && !mouseMoving) {
+    if (video.paused) {
+      video.play()
+      this.texture.needsUpdate = true
+    } else {
+      video.pause()
+      this.texture.needsUpdate = false
+    }
+  }
 }
 
 Pic360.prototype.endControl = function () {
@@ -124,6 +158,7 @@ Pic360.prototype.mouseMoveListener = function (e) {
   const { listeners } = this
 
   function move (e) {
+    this.mouseMoving = true
     this.lon -= e.movementX
     this.lat += e.movementY
     if (this.lat < -60) this.lat = -60
@@ -137,6 +172,7 @@ Pic360.prototype.mouseMoveListener = function (e) {
 
   removeEventListener('mousemove', listeners.mousemove)
   removeEventListener('mouseup', listeners.mouseup)
+  this.mouseMoving = false
 
   listeners.mousemove = move.bind(this)
   listeners.mouseup = end.bind(this)
@@ -179,3 +215,4 @@ Pic360.prototype.touchMoveListener = function (e) {
 Pic360.prototype.mouseWheelListener = function (e) {}
 
 Pic360.prototype.SIZE = 1000
+
