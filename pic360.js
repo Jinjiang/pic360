@@ -1,16 +1,24 @@
 
-function Pic360 (src, el, { needCtrl, isVideo, lon, lat }) {
+function Pic360 (src, el, { needCtrl, isVideo, needOrientation, lon, lat }) {
   if (!src || !el || !el.nodeType === 1) {
     return null
   }
   this.src = src
   this.el = el
   this.isVideo = isVideo
+  this.needCtrl = needCtrl
+  this.needOrientation = needOrientation
   this.lon = lon || 0
   this.lat = lat || 0
+  this.changes = {
+    lon: 0, lat: 0
+  }
   this.initCanvas()
   if (needCtrl) {
     this.initControl()
+  }
+  if (needOrientation) {
+    this.initOrientation()
   }
 }
 
@@ -59,10 +67,13 @@ Pic360.prototype.initVideoTexture = function () {
 }
 
 Pic360.prototype.draw = function () {
-  const { renderer, scene, camera } = this
+  const { renderer, scene, camera, changes } = this
+
+  if (this.lat < -60) this.lat = -60
+  if (this.lat > 60) this.lat = 60
 
   const phi = (90 - this.lat) * Math.PI / 180
-  const theta = (180 + this.lon) * Math.PI / 180
+  const theta = (180 + this.lon + changes.lon * 4) * Math.PI / 180
   const x = this.SIZE * Math.sin(phi) * Math.cos(theta)
   const y = this.SIZE * Math.cos(phi)
   const z = this.SIZE * Math.sin(phi) * Math.sin(theta)
@@ -96,21 +107,9 @@ Pic360.prototype.initControl = function () {
   this.listeners = { keydown, mousedown, mousewheel, touchstart }
 
   if (isVideo) {
-    const play = this.playListener.bind(this)
-    el.addEventListener('click', play)
-  }
-}
-
-Pic360.prototype.playListener = function () {
-  const { video, isVideo, mouseMoving } = this
-  if (isVideo && !mouseMoving) {
-    if (video.paused) {
-      video.play()
-      this.texture.needsUpdate = true
-    } else {
-      video.pause()
-      this.texture.needsUpdate = false
-    }
+    const click = this.playListener.bind(this)
+    el.addEventListener('click', click)
+    this.listeners.click = click
   }
 }
 
@@ -124,7 +123,9 @@ Pic360.prototype.endControl = function () {
     touchstart,
     touchmove,
     touchend,
-    mousewheel
+    mousewheel,
+    click,
+    deviceorientation
   } = listeners
   removeEventListener('keydown', keydown)
   el.removeEventListener('mousedown', mousedown)
@@ -135,6 +136,8 @@ Pic360.prototype.endControl = function () {
   removeEventListener('touchend', touchend)
   removeEventListener('touchcancel', touchend)
   el.removeEventListener('mousewheel', mousewheel)
+  el.removeEventListener('click', click)
+  removeEventListener('deviceorientation', deviceorientation)
 }
 
 Pic360.prototype.keyDownListener = function (e) {
@@ -161,8 +164,6 @@ Pic360.prototype.mouseMoveListener = function (e) {
     this.mouseMoving = true
     this.lon -= e.movementX
     this.lat += e.movementY
-    if (this.lat < -60) this.lat = -60
-    if (this.lat > 60) this.lat = 60
   }
 
   function end (e) {
@@ -191,8 +192,6 @@ Pic360.prototype.touchMoveListener = function (e) {
     const movementY = e.touches[0].clientY - startY
     this.lon = lon - movementX
     this.lat = lat + movementY
-    if (this.lat < -60) this.lat = -60
-    if (this.lat > 60) this.lat = 60
   }
 
   function end (e) {
@@ -212,7 +211,36 @@ Pic360.prototype.touchMoveListener = function (e) {
   addEventListener('touchcancel', listeners.touchend)
 }
 
-Pic360.prototype.mouseWheelListener = function (e) {}
+Pic360.prototype.mouseWheelListener = function (e) {
+}
+
+Pic360.prototype.playListener = function () {
+  const { video, isVideo, mouseMoving } = this
+  if (isVideo && !mouseMoving) {
+    if (video.paused) {
+      video.play()
+      this.texture.needsUpdate = true
+    } else {
+      video.pause()
+      this.texture.needsUpdate = false
+    }
+  }
+}
+
+Pic360.prototype.initOrientation = function () {
+  const deviceorientation = function (e) {
+    const { beta, gamma } = e
+    if (!this.orientation) {
+      this.orientation = { beta, gamma }
+    } else {
+      this.changes = {
+        lat: beta - this.orientation.beta,
+        lon: gamma - this.orientation.gamma
+      }
+    }
+  }.bind(this)
+  addEventListener('deviceorientation', deviceorientation)
+  this.listeners.deviceorientation = deviceorientation
+}
 
 Pic360.prototype.SIZE = 1000
-
