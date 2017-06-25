@@ -20,11 +20,12 @@
     height: 480px;
     background-color: silver;
   "></div>
+  <div id="log" style="position: absolute; left: 1em; top: 1em; color: yellow;"></div>
   <script>
     const pic = new Pic360(
       './sample.jpg',
       document.querySelector('#target'),
-      { needCtrl: true})
+      { needCtrl: true, needOrientation: true })
     // const vid = new Pic360(
     //   './sample.mov',
     //   document.querySelector('#target'),
