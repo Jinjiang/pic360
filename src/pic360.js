@@ -10,6 +10,7 @@ function Pic360 (src, el, { needCtrl, isVideo, needOrientation, lon, lat }) {
   this.needOrientation = needOrientation
   this.lon = lon || 0
   this.lat = lat || 0
+  this.distance = this.SIZE
   this.changes = {
     lon: 0, lat: 0
   }
@@ -27,7 +28,7 @@ Pic360.prototype.initCanvas = function () {
   const { offsetWidth, offsetHeight } = el
 
   const scene = new THREE.Scene()
-  const camera = new THREE.PerspectiveCamera(75, offsetWidth / offsetHeight, 0.1, 1000)
+  const camera = new THREE.PerspectiveCamera(75, offsetWidth / offsetHeight, 0.1, 5000)
 
   const renderer = new THREE.WebGLRenderer()
   renderer.setSize(offsetWidth, offsetHeight)
@@ -74,11 +75,11 @@ Pic360.prototype.draw = function () {
 
   const phi = (90 - this.lat) * Math.PI / 180
   const theta = (180 + this.lon + changes.lon * 4) * Math.PI / 180
-  const x = this.SIZE * Math.sin(phi) * Math.cos(theta)
-  const y = this.SIZE * Math.cos(phi)
-  const z = this.SIZE * Math.sin(phi) * Math.sin(theta)
+  camera.position.x = Math.round(this.distance * Math.sin(phi) * Math.cos(theta))
+  camera.position.y = Math.round(this.distance * Math.cos(phi))
+  camera.position.z = Math.round(this.distance * Math.sin(phi) * Math.sin(theta))
 
-  camera.lookAt(new THREE.Vector3(x, y, z))
+  camera.lookAt(scene.position)
   renderer.render(scene, camera)
 
   requestAnimationFrame(this.draw.bind(this))
@@ -100,11 +101,11 @@ Pic360.prototype.initControl = function () {
   el.addEventListener('touchstart', touchstart)
 
   // mouse wheel
-  const mousewheel = this.mouseWheelListener.bind(this)
-  el.addEventListener('mousewheel', mousewheel)
+  const wheel = this.wheelListener.bind(this)
+  addEventListener('wheel', wheel)
 
   // touch move, zoom ...
-  this.listeners = { keydown, mousedown, mousewheel, touchstart }
+  this.listeners = { keydown, mousedown, wheel, touchstart }
 
   if (isVideo) {
     const click = this.playListener.bind(this)
@@ -123,7 +124,7 @@ Pic360.prototype.endControl = function () {
     touchstart,
     touchmove,
     touchend,
-    mousewheel,
+    wheel,
     click,
     deviceorientation
   } = listeners
@@ -135,7 +136,7 @@ Pic360.prototype.endControl = function () {
   removeEventListener('touchmove', touchmove)
   removeEventListener('touchend', touchend)
   removeEventListener('touchcancel', touchend)
-  el.removeEventListener('mousewheel', mousewheel)
+  removeEventListener('wheel', wheel)
   el.removeEventListener('click', click)
   removeEventListener('deviceorientation', deviceorientation)
 }
@@ -211,7 +212,9 @@ Pic360.prototype.touchMoveListener = function (e) {
   addEventListener('touchcancel', listeners.touchend)
 }
 
-Pic360.prototype.mouseWheelListener = function (e) {
+Pic360.prototype.wheelListener = function (e) {
+  e.preventDefault()
+  this.distance += e.deltaY * 0.05
 }
 
 Pic360.prototype.playListener = function () {
